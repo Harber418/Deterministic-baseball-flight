@@ -1,0 +1,219 @@
+from matplotlib import pyplot as plt
+%matplotlib inline
+import numpy as np
+import time
+import scipy 
+
+# baseball constants
+m = 0.1451 # mass in kg
+c = 23.21  # circumference in cm
+r = c / 2 / np.pi / 100 # radius in m
+A = np.pi * (r)**2 # cross-sectional area in m^2
+
+# drag coefficients
+CD0 = 0.2971
+CD1 = 0.02921
+
+# lift coefficients
+CL0 = 0.5831
+CL1 = 2.3331
+CL2 = 1.1201
+
+# Earth-related constants
+rhoE = 1.181 # air density at sea level kg/m^3
+g = 9.806651 # gravitational acceleration m/s^2
+
+def S(r,w,v):
+    return(r*w)/v
+
+
+def CD(w):
+    "calculates drag coefficient"
+    return (CD0 + CD1*(w/16.67))
+
+
+def FD(vx,vy,vz,w):
+    "drag force for a given velocity "
+    V = np.sqrt(vx**2 + vy**2 + vz**2)
+    unit_v = np.array([vx/V,vy/V,vz/V])
+    return -0.5*CD(w)*A*rhoE*(V**2)*unit_v
+
+    
+def CL(r,w,v):
+    return (CL2*S(r,w,v))/(CL0 + CL1*S(r,w,v))
+
+
+def FM(vx,vy,vz,w):
+    W = np.array([w,0,0])
+    w_unit = W/np.linalg.norm(W)
+    V = np.sqrt(vx**2 + vy**2 + vz**2)
+    unit_v = np.array([vx/V,vy/V,vz/V])
+    cross = np.cross(w_unit,unit_v)
+    return 0.5*A*rhoE*CL(r,w,V)*V**2*cross
+def projectile_motion_gravity(t,f):
+
+    vals = np.zeros_like(f)
+    vals[0] = f[3]
+    vals[1] = f[4]
+    vals[2] = f[5]
+    vals[3] = 0
+    vals[4] = 0
+    vals[5] = -g
+    return vals
+
+    
+def projectile_motion_gravity_drag(t,f,w):
+
+    F = FD(f[3],f[4],f[5],w)
+    vals = np.zeros_like(f)
+    vals[0] = f[3]
+    vals[1] = f[4]
+    vals[2] = f[5]
+    vals[3] = F[0]/m
+    vals[4] = F[1]/m
+    vals[5] = F[2]/m -g
+    return vals
+
+    
+def projectile_motion_gravity_drag_magnus(t,f,w):
+
+    F_Drag = FD(f[3],f[4],f[5],w)
+    F_Magnus = FM(f[3],f[4],f[5],w)
+
+    vals = np.zeros_like(f)def projectile_motion_gravity(t,f):
+
+    vals = np.zeros_like(f)
+    vals[0] = f[3]
+    vals[1] = f[4]
+    vals[2] = f[5]
+    vals[3] = 0
+    vals[4] = 0
+    vals[5] = -g
+    return vals
+
+    
+def projectile_motion_gravity_drag(t,f,w):
+
+    F = FD(f[3],f[4],f[5],w)
+    vals = np.zeros_like(f)
+    vals[0] = f[3]
+    vals[1] = f[4]
+    vals[2] = f[5]
+    vals[3] = F[0]/m
+    vals[4] = F[1]/m
+    vals[5] = F[2]/m -g
+    return vals
+
+    
+def projectile_motion_gravity_drag_magnus(t,f,w):
+
+    F_Drag = FD(f[3],f[4],f[5],w)
+    F_Magnus = FM(f[3],f[4],f[5],w)
+
+    vals = np.zeros_like(f)
+    vals[0] = f[3]
+    vals[1] = f[4]
+    vals[2] = f[5]
+    vals[3] = F_Drag[0]/m +F_Magnus[0]/m
+    vals[4] = F_Drag[1]/m +F_Magnus[1]/m
+    vals[5] = F_Drag[2]/m +F_Magnus[2]/m -g
+    return vals
+
+
+def hit_ground(t,f,*args):
+    return f[2]
+
+
+hit_ground.terminal = True 
+hit_ground.direction = -1 
+
+
+def problem3_task1(vi, theta):
+    "theta converted to radians"
+    theta = np.radians(theta)
+    
+    #same starting postion for each case
+    fi = np.array([0,0,1,0,vi*np.cos(theta),vi*np.sin(theta)])
+    time = (0,60)
+    
+    #gravity only --------------------------------------------------------------------------------------------------
+    sol1 = scipy.integrate.solve_ivp(projectile_motion_gravity,time,fi,events=(hit_ground), dense_output=True)
+    tf1 = sol1.t_events[0][0]
+    
+
+    "the final distance"
+    distances1 = sol1.sol(tf1)
+    distance1 = np.sqrt(distances1[0]**2 + distances1[1]**2)
+
+    # now gravity and drag----------------------------------------------------------------------------------------------
+    w=0
+    sol2 = scipy.integrate.solve_ivp(projectile_motion_gravity_drag,time,fi,args=(w,),events=(hit_ground), dense_output=True)
+    tf2 = sol2.t_events[0][0]
+    "final distacne"
+    distances2 = sol2.sol(tf2)
+    distance2 = np.sqrt(distances2[0]**2 + distances2[1]**2)
+    
+    # gravit and grag with w = 50 --------------------------------------------------------------------------------
+    w = 50 
+    sol3 = scipy.integrate.solve_ivp(projectile_motion_gravity_drag,time,fi,args=(w,),events=(hit_ground), dense_output=True)
+    tf3 = sol3.t_events[0][0]
+    
+    "distance"
+    distance3 = sol3.sol(tf3)
+    distance3 = np.sqrt(distance3[0]**2 + distance3[1]**2)
+
+    # gracity, drag, Magnus----------------------------------------------------------------------------------------------- 
+    sol4 = scipy.integrate.solve_ivp(projectile_motion_gravity_drag_magnus,time,fi,args=(w,),events=(hit_ground), dense_output=True)
+    tf4 = sol4.t_events[0][0]
+    "distance"
+    distances4 = sol4.sol(tf4)
+    distance4 = np.sqrt(distances4[0]**2 + distances4[1]**2)
+
+    # plot ------------------------------------------------------------------------------------------------------------------------------
+    final_time = np.array([tf1,tf2,tf3,tf4])
+
+    
+    t1 = np.linspace(0 , tf1, 1000)
+    t2 = np.linspace(0 , tf2, 1000)
+    t3 = np.linspace(0 , tf3, 1000)
+    t4 = np.linspace(0 , tf4, 1000)
+
+    Y1 = sol1.sol(t1)
+    Y2 = sol2.sol(t2)
+    Y3 = sol3.sol(t3)
+    Y4 = sol4.sol(t4)
+
+    fig = plt.figure()
+    ax = plt.axes()
+    
+    ax.plot( Y1[1], Y1[2], color = 'b', label = 'gravity')
+
+    ax.plot( Y2[1], Y2[2], color = 'r', label = 'gravity + drag(w=0)')
+
+    ax.plot( Y3[1], Y3[2], color = 'g', label = 'gravity + drag(w=50)')
+
+    ax.plot( Y4[1], Y4[2], color = 'purple', label = 'gravity + drag + Magnus')
+    ax.set_xlabel("Y (m)")
+    ax.set_ylabel(" Z (m)") 
+    plt.title('Baseball trajectory ')
+    ax.legend(fontsize = 'x-small')  
+    plt.show()
+    return distance1, distance2, distance3, distance4
+
+
+# to check code 
+def check_p3t1(vi, theta, answers):
+    tol = 0.01
+    dis = problem3_task1(vi, theta)
+    print (f"Distances: {dis} m.")
+    print (f"True distances: {answers} m.")
+    err = np.abs(np.array(dis) - np.array(answers))
+    print (f"Errors: {err} m.")
+    good = err <= tol
+    print(f"{good.sum()}/{good.size} correct.")
+
+vi = 35 # m/s
+theta = 30 # degrees
+dis_true = [109.88492991898876, 80.31584492518095, 74.83228998784594, 80.46328540954397]
+check_p3t1(vi, theta, dis_true)
+    
