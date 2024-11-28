@@ -1,0 +1,51 @@
+def problem3_task2(vi_mean, vi_std, theta_mean, theta_std, spin_mean, spin_std, distance, tolerance):
+    "seed the distribution to get deterministic results "
+    np.random.seed(seed = UID)
+    theta_mean = np.radians(theta_mean)
+    theta_std = np.radians(theta_std)
+    "sample resutls "
+    N = 1000
+    last_N = 0
+    tol = 1e8
+    success = []
+    fail =[]
+    while tol > tolerance:
+        current_N = N - last_N
+        "draw N values for the gaussian distribution "
+        speed_dis = np.random.normal(vi_mean,vi_std,current_N)
+        theta_dis = np.random.normal(theta_mean,theta_std,current_N)
+        spin_dis = np.random.normal(spin_mean,spin_std,current_N)
+
+        "each row will be a differnt draw for the inital conditions fi "
+        full_fi = np.vstack((np.zeros(current_N),np.zeros(current_N), np.ones(current_N), np.zeros(current_N),(spin_dis * np.cos(theta_dis)),(spin_dis * np.sin(theta_dis)))).T
+
+        for i in range(last_N, N):
+            
+            fi = full_fi[i-last_N]
+            w= spin_dis[i-last_N]
+            
+            time = (0,60)
+            solution = scipy.integrate.solve_ivp(projectile_motion_gravity_drag_magnus,time,fi,args=(w,),events=(hit_ground), dense_output=True)
+
+            if solution.t_events[0].size >0:
+                tf = solution.t_events[0][0]
+                distance_calc = solution.sol(tf)
+                if distance_calc[1] > distance:
+                    success.append(distance_calc[1])
+
+        ratio = len(success)/ N
+        
+        tol = ratio **(-0.5)
+        
+        last_N = N
+        N = N*2
+    
+    #print(f"the n is {N} and  tol is {tol}")
+    return ratio 
+
+t1 = time.time()
+val = problem3_task2(30, 5, 20, 10, 33.33, 33.33, 100, 0.15)
+t2 = time.time()
+print (f"Fraction is {val}.")
+print (f"Computed in {t2-t1} seconds.")
+
